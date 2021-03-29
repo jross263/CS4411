@@ -66,14 +66,25 @@ const createSQLiteDB = () => new Promise((resolve, reject)=>{
     });
 })
 
-async function main() {
+async function fetchUserList(){
+    const axios = require('axios');
+    console.log("Generating random users...")
+    const res = await axios.get('https://randomuser.me/api/?results=250')
+    return res.data.results
+}
+
+async function main(users) {
     const { sequelizeInitialize } = require("./sequelize/setupSeqelize");
+    const { sequelizeBenchmark } = require('./sequelize/benchmark');
     const { typeormInitialize } = require("./typeorm/setupTypeORM");
     const { bookmarkInitialize } = require("./bookmark/setupBookmark");
 
     const sequelizeInstances = await sequelizeInitialize();
     const typeormInstances = await typeormInitialize();
     const bookmarkInstances = await bookmarkInitialize();
+
+    await sequelizeBenchmark(sequelizeInstances, users);
+    
     
     Object.keys(sequelizeInstances).forEach(ele => sequelizeInstances[ele].close());
     Object.keys(typeormInstances).forEach(ele => typeormInstances[ele].close());
@@ -82,8 +93,8 @@ async function main() {
 }
 
 if (require.main === module) {
-    Promise.all([createMySQLDB(),createPostgresDB(),createSQLiteDB()]).then(()=>{
-        main();
+    Promise.all([createMySQLDB(),createPostgresDB(),createSQLiteDB(),fetchUserList()]).then((data)=>{
+        main(data[3]);
     }).catch((e)=>{
         console.log(e);
     })

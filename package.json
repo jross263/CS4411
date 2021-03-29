@@ -17,14 +17,16 @@
     },
     "homepage": "https://github.com/jross263/CS4411#readme",
     "dependencies": {
+        "axios": "^0.21.1",
         "bookshelf": "^1.2.0",
         "knex": "^0.95.3",
         "mysql2": "^2.2.5",
         "objection": "^2.2.15",
         "pg": "^8.5.1",
         "pg-hstore": "^2.3.3",
+        "random-user": "^2.0.2",
         "sequelize": "^6.6.2",
         "sqlite3": "^5.0.2",
         "typeorm": "^0.2.31"
-      }
+    }
 }
