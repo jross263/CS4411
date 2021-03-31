@@ -1,28 +1,35 @@
 const {performance} = require('perf_hooks');
 
+const benchmarkSpeeds = {
+  'mysql':{},
+  'postgres':{},
+  'sqlite': {}
+};
+
 async function sequelizeBenchmark(sequelizeInstances, users){
-  console.log("\nSEQUELIZE-INSERT 250 USERS");
+  console.log("\nSEQUELIZE-INSERT 5000 USERS");
   await insertBenchmark(sequelizeInstances, users, 'mysql');
   await insertBenchmark(sequelizeInstances, users, 'postgres');
   await insertBenchmark(sequelizeInstances, users, 'sqlite');
-  console.log("\nSEQUELIZE-UPDATE 250 USERS");
+  console.log("\nSEQUELIZE-UPDATE 5000 USERS");
   await updateBenchmark(sequelizeInstances, users, 'mysql');
   await updateBenchmark(sequelizeInstances, users, 'postgres');
   await updateBenchmark(sequelizeInstances, users, 'sqlite');
-  console.log("\nSEQUELIZE-SELECT 250 USERS");
+  console.log("\nSEQUELIZE-SELECT 5000 USERS");
   await selectBenchmark(sequelizeInstances, 'mysql');
   await selectBenchmark(sequelizeInstances, 'postgres');
   await selectBenchmark(sequelizeInstances, 'sqlite');
-  console.log("\nSEQUELIZE-DELETE 250 USERS");
+  console.log("\nSEQUELIZE-DELETE 5000 USERS");
   await deleteBenchmark(sequelizeInstances, 'mysql');
   await deleteBenchmark(sequelizeInstances, 'postgres');
   await deleteBenchmark(sequelizeInstances, 'sqlite');
+  return benchmarkSpeeds;
 }
 
-async function insertBenchmark(sequelizeInstances, users, orm){
+async function insertBenchmark(sequelizeInstances, users, dbms){
   const start = performance.now();
   for(let i = 0; i < users.length; i++){
-    await sequelizeInstances[orm].models.sequelizeUser.create({
+    await sequelizeInstances[dbms].models.sequelizeUser.create({
       firstName: users[i].name.first, 
       lastName: users[i].name.last, 
       email: users[i].email,
@@ -31,18 +38,18 @@ async function insertBenchmark(sequelizeInstances, users, orm){
     })
   }
   const end = performance.now();
-  console.log(`${orm.toUpperCase()} ${end - start}ms`);
+  benchmarkSpeeds[dbms]['insert'] = (Math.round((end - start) * 100) / 100).toFixed(2);
 }
 
-async function updateBenchmark(sequelizeInstances, users, orm){
+async function updateBenchmark(sequelizeInstances, users, dbms){
   const start = performance.now();
-  for(let i = 0; i < users.length; i++){
-    await sequelizeInstances[orm].models.sequelizeUser.update({
-      firstName: users[users.length - 1 - i].name.first, 
-      lastName: users[users.length - 1 - i].name.last, 
-      email: users[users.length - 1 - i].email,
-      username: users[users.length - 1 - i].login.username,
-      password:  users[users.length - 1 - i].login.password
+  for(let i = 1; i < users.length + 1; i++){
+    await sequelizeInstances[dbms].models.sequelizeUser.update({
+      firstName: users[users.length - i].name.first, 
+      lastName: users[users.length - i].name.last, 
+      email: users[users.length - i].email,
+      username: users[users.length - i].login.username,
+      password:  users[users.length - i].login.password
     },{
       where: {
         id: i
@@ -50,23 +57,23 @@ async function updateBenchmark(sequelizeInstances, users, orm){
     })
   }
   const end = performance.now();
-  console.log(`${orm.toUpperCase()} ${end - start}ms`);
+  benchmarkSpeeds[dbms]['update'] = (Math.round((end - start) * 100) / 100).toFixed(2);
 }
 
-async function selectBenchmark(sequelizeInstances, orm){
+async function selectBenchmark(sequelizeInstances, dbms){
   const start = performance.now();
-  await sequelizeInstances[orm].models.sequelizeUser.findAll();
+  await sequelizeInstances[dbms].models.sequelizeUser.findAll();
   const end = performance.now();
-  console.log(`${orm.toUpperCase()} ${end - start}ms`);
+  benchmarkSpeeds[dbms]['select'] = (Math.round((end - start) * 100) / 100).toFixed(2);
 }
 
-async function deleteBenchmark(sequelizeInstances, orm){
+async function deleteBenchmark(sequelizeInstances, dbms){
   const start = performance.now();
-  await sequelizeInstances[orm].models.sequelizeUser.destroy({
+  await sequelizeInstances[dbms].models.sequelizeUser.destroy({
     truncate: true
   });
   const end = performance.now();
-  console.log(`${orm.toUpperCase()} ${end - start}ms`);
+  benchmarkSpeeds[dbms]['delete'] = (Math.round((end - start) * 100) / 100).toFixed(2);
 }
 
 exports.sequelizeBenchmark = sequelizeBenchmark;

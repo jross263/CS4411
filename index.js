@@ -28,48 +28,14 @@ async function createPostgresDB() {
         await client.end();
     }catch(e){
         await client.end();
-        throw "Invalid database name supplied in config.json for postgres";
+        throw "Invalid database name supplied in config.json for postgres, or supplied user is currently logged in";
     }
 }
-
-const createSQLiteDB = () => new Promise((resolve, reject)=>{
-    // load driver and confg file
-    const sqlite3 = require('sqlite3');
-    const { path } = require('./config.json').sqlite;
-    // create the connection
-    const cratesqliteDB = () => new Promise((resolve, reject)=>{
-        const db = new sqlite3.Database(path, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-            if (err) {
-                reject("Error creating sqlite database");
-            } else {
-                
-                resolve(db);
-            }
-        });
-    })
-    cratesqliteDB().then((db)=>{
-        const closesqliteDB = () => new Promise((resolve, reject)=>{
-            db.close((err) => {
-                if (err) {
-                    reject("Error closing sqlite database");
-                }
-                resolve();
-              });
-        })
-        closesqliteDB().then(()=>{
-            resolve();
-        }).catch((e)=>{
-            reject(e);
-        })
-    }).catch((e)=>{
-        reject(e);
-    });
-})
 
 async function fetchUserList(){
     const axios = require('axios');
     console.log("Generating random users...")
-    const res = await axios.get('https://randomuser.me/api/?results=250')
+    const res = await axios.get('https://randomuser.me/api/?results=5000')
     return res.data.results
 }
 
@@ -77,14 +43,121 @@ async function main(users) {
     const { sequelizeInitialize } = require("./sequelize/setupSeqelize");
     const { sequelizeBenchmark } = require('./sequelize/benchmark');
     const { typeormInitialize } = require("./typeorm/setupTypeORM");
-    const { bookmarkInitialize } = require("./bookmark/setupBookmark");
-
-    const sequelizeInstances = await sequelizeInitialize();
-    const typeormInstances = await typeormInitialize();
-    const bookmarkInstances = await bookmarkInitialize();
-
-    await sequelizeBenchmark(sequelizeInstances, users);
+    const { typeormBenchmark } = require('./typeorm/benchmark');
+    const { bookshelfInitialize } = require('./bookshelf/setupBookshelf')
+    const { bookshelfBenchmark } = require('./bookshelf/benchmark');
     
+    const sequelizeInstances = await sequelizeInitialize();
+    const sequelizeBenchmarkSpeeds = await sequelizeBenchmark(sequelizeInstances, users);
+
+    
+
+    const typeormInstances = await typeormInitialize();
+    const typeormBenchmarkSpeeds = await typeormBenchmark(typeormInstances, users);
+
+    
+
+    const bookmarkInstances = await bookshelfInitialize();
+    const bookshelfBenchmarkSpeeds = await bookshelfBenchmark(bookmarkInstances, users);
+
+    const tables = {
+        'insert': {
+            'sequelize':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'typeorm':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'bookshelf':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            }
+        },
+        'update': {
+            'sequelize':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'typeorm':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'bookshelf':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            }
+        },
+        'select': {
+            'sequelize':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'typeorm':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'bookshelf':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            }
+        },
+        'delete': {
+            'sequelize':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'typeorm':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            },
+            'bookshelf':{
+                'mysql':{},
+                'postgres':{},
+                'sqlite': {}
+            }
+        }
+    }
+    Object.keys(sequelizeBenchmarkSpeeds).forEach(ele => {
+        tables.insert.sequelize[ele] = sequelizeBenchmarkSpeeds[ele].insert
+        tables.update.sequelize[ele] = sequelizeBenchmarkSpeeds[ele].update
+        tables.select.sequelize[ele] = sequelizeBenchmarkSpeeds[ele].select
+        tables.delete.sequelize[ele] = sequelizeBenchmarkSpeeds[ele].delete
+    });
+    Object.keys(typeormBenchmarkSpeeds).forEach(ele => {
+        tables.insert.typeorm[ele] = typeormBenchmarkSpeeds[ele].insert
+        tables.update.typeorm[ele] = typeormBenchmarkSpeeds[ele].update
+        tables.select.typeorm[ele] = typeormBenchmarkSpeeds[ele].select
+        tables.delete.typeorm[ele] = typeormBenchmarkSpeeds[ele].delete
+    });
+    Object.keys(bookshelfBenchmarkSpeeds).forEach(ele => {
+        tables.insert.bookshelf[ele] = bookshelfBenchmarkSpeeds[ele].insert
+        tables.update.bookshelf[ele] = bookshelfBenchmarkSpeeds[ele].update
+        tables.select.bookshelf[ele] = bookshelfBenchmarkSpeeds[ele].select
+        tables.delete.bookshelf[ele] = bookshelfBenchmarkSpeeds[ele].delete
+    });
+
+
+    console.log("\n\nINSERT DATA (ms)")
+    console.table(tables.insert)
+    console.log("\nUPDATE DATA (ms)")
+    console.table(tables.update)
+    console.log("\nSELECT DATA (ms)")
+    console.table(tables.select)
+    console.log("\nDELETE DATA (ms)")
+    console.table(tables.delete)
     
     Object.keys(sequelizeInstances).forEach(ele => sequelizeInstances[ele].close());
     Object.keys(typeormInstances).forEach(ele => typeormInstances[ele].close());
@@ -93,8 +166,8 @@ async function main(users) {
 }
 
 if (require.main === module) {
-    Promise.all([createMySQLDB(),createPostgresDB(),createSQLiteDB(),fetchUserList()]).then((data)=>{
-        main(data[3]);
+    Promise.all([createMySQLDB(),createPostgresDB(),fetchUserList()]).then((data)=>{
+        main(data[2]);
     }).catch((e)=>{
         console.log(e);
     })
