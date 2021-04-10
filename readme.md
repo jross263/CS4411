@@ -15,9 +15,6 @@ Before running the application create a file in the project root called `config.
 		"host": ADDRESS_OF_DATABASE,
 		"user": USERNAME_OF_DATABASE_USER,
 		"password": USERS_PASSWORD
-	},
-	"sqlite": {
-		"path": PATH_TO_SQLITE_DATABASE
 	}
 }
 ```
