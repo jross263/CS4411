@@ -1,0 +1,14 @@
+{
+  "mysql": {
+    "database": "cs4411_group_project",
+    "host": "localhost",
+    "user": "root",
+    "password": "password123"
+  },
+  "postgres": {
+    "database": "cs4411_group_project",
+    "host": "localhost",
+    "user": "postgres",
+    "password": "password"
+  }
+}
